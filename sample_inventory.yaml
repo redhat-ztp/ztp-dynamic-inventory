@@ -1,0 +1,24 @@
+---
+- name: cluster_name
+  domain: test.domain
+  rootfs_url: http://<path_to_rootfs_server>/<path_to_rootfs.img>
+  ingress_vip: <not_used_ip_1>
+  api_vip: <not_used_ip_2>
+  uses_racadm: [true|false]
+  ignition_http_server_path: 
+  provision_controlplane: true/false
+  controlplane_hypervisor:
+    bridge: brname
+    libvirt_uri: qemu:///system (or remote hypervisors)
+  workers:
+    - name: worker_fqdn_hostname
+      bmc_type: [Supermicro/Dell]
+      bmc_user: user
+      bmc_password: password
+      kernel_arguments: “literal of kernel arguments” [optional]
+      ramdisk_path: /path/to/folder [optional]
+      virtualmedia:
+        smb_host: ip_of_smb_share   [optional, just for samba]
+        smb_path: path_of_smb_share [optional, just for samba]
+        final_iso_path: path where to copy the final ISO
+
