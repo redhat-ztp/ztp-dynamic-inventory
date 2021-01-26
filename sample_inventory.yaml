@@ -1,24 +1,35 @@
 ---
 - name: cluster_name
   domain: test.domain
-  rootfs_url: http://<path_to_rootfs_server>/<path_to_rootfs.img>
-  ingress_vip: <not_used_ip_1>
-  api_vip: <not_used_ip_2>
-  uses_racadm: [true|false]
-  ignition_http_server_path: 
-  provision_controlplane: true/false
-  controlplane_hypervisor:
-    bridge: brname
-    libvirt_uri: qemu:///system (or remote hypervisors)
-  workers:
-    - name: worker_fqdn_hostname
-      bmc_type: [Supermicro/Dell]
-      bmc_user: user
-      bmc_password: password
-      kernel_arguments: “literal of kernel arguments” [optional]
-      ramdisk_path: /path/to/folder [optional]
+  rootfs_url: http://192.168.112.199/rootfs.img				# url that stores the rootfs image
+  ignition_url: http://192.168.112.199					# url for the http server storing ignition files
+  ingress_vip: 192.168.112.195						# any unused ip on the cluster CIDR range
+  api_vip: 192.168.112.196
+  uses_racadm: false							# true for Dell servers
+  ignition_http_server_path: /opt/cached_disconnected_images/		# local path of the http server storing ignition files
+  controlplane:								# if deploying a control plane, name of the bridge and url for the hypervisor. If not specified, the control plane will not be deployed
+    bridge: nm-bridge
+    libvirt_uri: qemu:///system
+  workers:								# list of remote workers to deploy
+    - hostname: worker-1.test-aut.cluster-testing			# full fqdn of the remote worker
+      bmc:								# bmc details: type(SuperMicro/Dell), address, user and password
+        type: SuperMicro
+        address: 192.168.111.211
+        user: ADMIN
+        password: ADMIN
+      ramdisk_path: /opt/network-config					# ramdisk path that is going to be included on the worker. This can contain any files, but will be used mostly for propagating network configuration
+      virtualmedia:							# virtual media settings. In case of being a samba share, specify the host and path of the share
+        smb_host: 192.168.111.1
+        smb_path: share
+        final_iso_path: /home/share					# local path of the http/samba share where the ISO is going to be stored
+    - hostname: worker-2.test-aut.cluster-testing
+      bmc:
+        type: SuperMicro
+        address: 192.168.111.211
+        user: ADMIN
+        password: ADMIN
+      ramdisk_path: /opt/network-config1
       virtualmedia:
-        smb_host: ip_of_smb_share   [optional, just for samba]
-        smb_path: path_of_smb_share [optional, just for samba]
-        final_iso_path: path where to copy the final ISO
-
+        smb_host: 192.168.111.1
+        smb_path: share
+        final_iso_path: /home/share
