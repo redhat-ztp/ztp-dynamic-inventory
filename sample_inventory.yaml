@@ -1,12 +1,15 @@
 ---
 - name: cluster_name
   domain: test.domain
+  version: "4.7"
   rootfs_url: http://192.168.112.199/rootfs.img                         # url that stores the rootfs image
   ignition_url: http://192.168.112.199                                  # url for the http server storing ignition files
+  installer_url: http://192.168.122.199:8080
   ingress_vip: 192.168.112.195                                          # any unused ip on the cluster CIDR range
   api_vip: 192.168.112.196
   uses_racadm: false                                                    # true for Dell servers
   ignition_http_server_path: /opt/cached_disconnected_images/           # local path of the http server storing ignition files
+  temporary_path: /tmp/
   controlplane:                                                         # if deploying a control plane, name of the bridge and url for the hypervisor. If not specified, the control plane will not be deployed
     bridge: nm-bridge
     libvirt_uri: qemu:///system
