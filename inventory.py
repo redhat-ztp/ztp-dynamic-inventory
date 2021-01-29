@@ -1,8 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 '''
-Takes a yaml inventory from an url and combines it with local secrets,
-to create a final inventory, to automate ZTP cluster deploy
+Dynamic inventory from remote yaml
 '''
 
 import argparse
@@ -13,12 +12,9 @@ from urllib.parse import urlparse
 from urllib.request import urlopen
 from urllib.error import URLError
 
+import json
+import os
 import yaml
-
-try:
-    import json
-except ImportError:
-    import simplejson as json
 
 
 class ZTPInventory(object):
@@ -26,20 +22,24 @@ class ZTPInventory(object):
     def __init__(self):
         self.inventory = {}
         self.read_cli_args()
+        self.get_inventory()
 
-        # Called with `--url`.
-        if self.args.url:
-            secrets = self.get_secrets(self.args.secrets_file)
-            if not secrets:
-                print("Error finding secrets file. Cannot continue")
-                return None
+    def get_inventory(self):
+        if not self.args.list:
+            print(json.dumps(self.empty_inventory()))
 
-            self.inventory = self.inventory_from_url(self.args.url, secrets)
-        else:
-            # just return an empty inventory
-            self.inventory = self.empty_inventory()
+        # secrets file can be retrieved from $HOME/.ztp/secrets
+        secrets_file = str(Path.home())+"/.ztp/secrets"
+        secrets = self.get_secrets(secrets_file)
+        if not secrets:
+            print(json.dumps(self.empty_inventory()))
 
-        print(json.dumps(self.inventory))
+        # the url can be read from env var
+        if not os.environ.get("INVENTORY_URL"):
+            print(json.dumps(self.empty_inventory()))
+
+        print(json.dumps(self.inventory_from_url(
+            os.environ.get("INVENTORY_URL"), secrets)))
 
     # reads secrets content from file. Return false if not exists
     def get_secrets(self, secrets_path):
@@ -80,41 +80,39 @@ class ZTPInventory(object):
 
         # now combine the content of yaml with secrets
         # to produce a final inventory
-        inventory_content = {
-                "all": {
-                    "vars": {
-                        "pull_secret": secrets["pull_secret"],
-                        "ssh_public_key": secrets["ssh_pubkey"],
-                        "ai_url": inventory["installer_url"],
-                        "ignition_url": inventory["ignition_url"],
-                        "rootfs_url": inventory["rootfs_url"],
-                        "cluster_name": inventory["name"],
-                        "cluster_domain": inventory["domain"],
-                        "cluster_version": inventory["version"],
-                        "ingress_vip": inventory["ingress_vip"],
-                        "api_vip": inventory["api_vip"],
-                        "ignition_http_server_path":
-                            inventory["ignition_http_server_path"],
-                        "temporary_path": inventory["temporary_path"]
-                    }
-                }
-            }
+        general_vars = {
+            "pull_secret": secrets["pull_secret"],
+            "ssh_public_key": secrets["ssh_pubkey"],
+            "ai_url": inventory["installer_url"],
+            "ignition_url": inventory["ignition_url"],
+            "rootfs_url": inventory["rootfs_url"],
+            "cluster_name": inventory["name"],
+            "cluster_domain": inventory["domain"],
+            "cluster_version": inventory["version"],
+            "ingress_vip": inventory["ingress_vip"],
+            "api_vip": inventory["api_vip"],
+            "ignition_http_server_path":
+                inventory["ignition_http_server_path"],
+            "temporary_path": inventory["temporary_path"]
+        }
 
         # check if we need to include controlplane data
         if inventory.get("controlplane"):
-            inventory_content["all"]["vars"]["provision_controlplane"] = True
-            inventory_content["all"]["vars"]["libvirt_uri"] = \
+            general_vars["provision_controlplane"] = True
+            general_vars["libvirt_uri"] = \
                 inventory["controlplane"]["libvirt_uri"]
-            inventory_content["all"]["vars"]["bridge_name"] = \
-                inventory["controlplane"]["bridge"]
+            general_vars["bridge_name"] = inventory["controlplane"]["bridge"]
         else:
-            inventory_content["all"]["vars"]["provision_controlplane"] = False
+            general_vars["provision_controlplane"] = False
+
+        inventory_content = {"all": {"vars": general_vars},
+                             "children": ["provisioner",
+                                          "ungrouped",
+                                          "worker_nodes"],
+                             "_meta": {"hostvars": {}},
+                             "worker_nodes": {"hosts": []}}
 
         # now check the workers
-        inventory_content["worker_nodes"] = {
-                "hosts": {}
-        }
-
         needs_racadm = False
         for worker in inventory["workers"]:
             # if at least exists one Dell, we need bmc
@@ -142,26 +140,26 @@ class ZTPInventory(object):
                             worker["virtualmedia"]["smb_path"]
 
             # add the worker information
-            inventory_content["worker_nodes"]["hosts"][worker["hostname"]] = \
-                worker
+            inventory_content["worker_nodes"]["hosts"].append(
+                worker["hostname"])
+            inventory_content["_meta"]["hostvars"][worker["hostname"]] = worker
 
         # finally, assign needs_bmc
         inventory_content["all"]["vars"]["need_racadm"] = needs_racadm
-        print(inventory_content)
+        return inventory_content
 
     # Empty inventory for testing.
     def empty_inventory(self):
-        return {'_meta': {'hostvars': {}}}
+        return {"_meta": {"hostvars": {}}}
 
     # Read the command line args passed to the script.
     def read_cli_args(self):
         parser = argparse.ArgumentParser()
-        parser.add_argument('--url', action='store')
-        parser.add_argument('--secrets_file', action='store',
-                            default=str(Path.home())+"/.ztp/secrets")
+        parser.add_argument('--list', action='store_true',
+                            help="Returns the full inventory list")
+        parser.add_argument('--host', help="Returns empty inventory")
         self.args = parser.parse_args()
 
 
 # Get the inventory.
-if __name__ == "__main__":
-    ZTPInventory()
+ZTPInventory()
