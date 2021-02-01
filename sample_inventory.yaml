@@ -1,10 +1,10 @@
 ---
-- name: cluster_name
-  domain: test.domain
+- name: test-aut
+  domain: cluster.testing
   version: "4.7"
   rootfs_url: http://192.168.112.199/rootfs.img                         # url that stores the rootfs image
   ignition_url: http://192.168.112.199                                  # url for the http server storing ignition files
-  installer_url: http://192.168.122.199:8080
+  installer_url: http://192.168.112.199:8080
   ingress_vip: 192.168.112.195                                          # any unused ip on the cluster CIDR range
   api_vip: 192.168.112.196
   uses_racadm: false                                                    # true for Dell servers

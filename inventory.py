@@ -27,19 +27,32 @@ class ZTPInventory(object):
     def get_inventory(self):
         if not self.args.list:
             print(json.dumps(self.empty_inventory()))
+            return
 
-        # secrets file can be retrieved from $HOME/.ztp/secrets
-        secrets_file = str(Path.home())+"/.ztp/secrets"
+        # get secrets file, defaults to $HOME/.ztp/secrets
+        if not os.environ.get("SECRETS_FILE"):
+            secrets_file = str(Path.home())+"/.ztp/secrets"
+
         secrets = self.get_secrets(secrets_file)
         if not secrets:
             print(json.dumps(self.empty_inventory()))
+            return
 
         # the url can be read from env var
         if not os.environ.get("INVENTORY_URL"):
             print(json.dumps(self.empty_inventory()))
+            return
+
+        # the provisioner host can be read from env var, localhost by default
+        provisioner_host = "localhost"
+        if os.environ.get("PROVISIONER_HOST"):
+            provisioner_host = os.environ.get("PROVISIONER_HOST")
+        provisioner_connection="local"
+        if os.environ.get("PROVISIONER_CONNECTION"):
+            provisioner_connection = os.environ.get("PROVISIONER_CONNECTION")
 
         print(json.dumps(self.inventory_from_url(
-            os.environ.get("INVENTORY_URL"), secrets)))
+            os.environ.get("INVENTORY_URL"), secrets, provisioner_host, provisioner_connection)))
 
     # reads secrets content from file. Return false if not exists
     def get_secrets(self, secrets_path):
@@ -74,7 +87,7 @@ class ZTPInventory(object):
             return None
 
     # generate inventory from a yaml in an url
-    def inventory_from_url(self, url, secrets):
+    def inventory_from_url(self, url, secrets, provisioner_host, provisioner_connection):
         # retrieve the content
         inventory = self.retrieve_yaml_inventory(url)
 
@@ -106,11 +119,10 @@ class ZTPInventory(object):
             general_vars["provision_controlplane"] = False
 
         inventory_content = {"all": {"vars": general_vars},
-                             "children": ["provisioner",
-                                          "ungrouped",
-                                          "worker_nodes"],
                              "_meta": {"hostvars": {}},
-                             "worker_nodes": {"hosts": []}}
+                             "worker_nodes": {"hosts": []},
+                             "provisioner": {"hosts": [provisioner_host],
+                                             "vars": {"ansible_connection": provisioner_connection}}}
 
         # now check the workers
         needs_racadm = False
