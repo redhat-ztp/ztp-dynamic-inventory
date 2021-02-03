@@ -15,6 +15,7 @@
     libvirt_uri: qemu:///system
   workers:                                                              # list of remote workers to deploy
     - hostname: worker-1.test-aut.cluster-testing                       # full fqdn of the remote worker
+      name: worker_1
       bmc:                                                              # bmc details: type(SuperMicro/Dell), address, user and password
         type: SuperMicro
         address: 192.168.111.211
@@ -26,9 +27,10 @@
         smb_path: share
         final_iso_path: /home/share                                     # local path of the http/samba share where the ISO is going to be stored
     - hostname: worker-2.test-aut.cluster-testing
+      name: worker_2
       bmc:
         type: SuperMicro
-        address: 192.168.111.211
+        address: 192.168.111.212
         user: ADMIN
         password: ADMIN
       ramdisk_path: /opt/network-config1

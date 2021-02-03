@@ -137,7 +137,8 @@ class ZTPInventory(object):
                 "bmc_address": worker["bmc"]["address"],
                 "bmc_user": worker["bmc"]["user"],
                 "bmc_password": worker["bmc"]["password"],
-                "ramdisk_path": worker["ramdisk_path"]
+                "ramdisk_path": worker["ramdisk_path"],
+                "name": worker["name"]
             }
 
             # virtual media settings, if we need those
@@ -154,7 +155,7 @@ class ZTPInventory(object):
             # add the worker information
             inventory_content["worker_nodes"]["hosts"].append(
                 worker["hostname"])
-            inventory_content["_meta"]["hostvars"][worker["hostname"]] = worker
+            inventory_content["_meta"]["hostvars"][worker["hostname"]] = worker_info
 
         # finally, assign needs_bmc
         inventory_content["all"]["vars"]["need_racadm"] = needs_racadm
