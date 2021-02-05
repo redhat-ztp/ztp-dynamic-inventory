@@ -13,6 +13,13 @@
   controlplane:                                                         # if deploying a control plane, name of the bridge and url for the hypervisor. If not specified, the control plane will not be deployed
     bridge: nm-bridge
     libvirt_uri: qemu:///system
+    masters:
+      - name: master_1
+        mac_address: 52:54:00:55:f3:31
+      - name: master_2
+        mac_address: 52:54:00:55:f3:32
+      - name: master_3
+        mac_address: 52:54:00:55:f3:33
   workers:                                                              # list of remote workers to deploy
     - hostname: worker-1.test-aut.cluster-testing                       # full fqdn of the remote worker
       name: worker_1

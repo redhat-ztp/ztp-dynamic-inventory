@@ -47,12 +47,13 @@ class ZTPInventory(object):
         provisioner_host = "localhost"
         if os.environ.get("PROVISIONER_HOST"):
             provisioner_host = os.environ.get("PROVISIONER_HOST")
-        provisioner_connection="local"
+        provisioner_connection = "local"
         if os.environ.get("PROVISIONER_CONNECTION"):
             provisioner_connection = os.environ.get("PROVISIONER_CONNECTION")
 
         print(json.dumps(self.inventory_from_url(
-            os.environ.get("INVENTORY_URL"), secrets, provisioner_host, provisioner_connection)))
+            os.environ.get("INVENTORY_URL"), secrets, provisioner_host,
+            provisioner_connection)))
 
     # reads secrets content from file. Return false if not exists
     def get_secrets(self, secrets_path):
@@ -87,7 +88,8 @@ class ZTPInventory(object):
             return None
 
     # generate inventory from a yaml in an url
-    def inventory_from_url(self, url, secrets, provisioner_host, provisioner_connection):
+    def inventory_from_url(self, url, secrets, provisioner_host,
+                           provisioner_connection):
         # retrieve the content
         inventory = self.retrieve_yaml_inventory(url)
 
@@ -109,20 +111,33 @@ class ZTPInventory(object):
             "temporary_path": inventory["temporary_path"]
         }
 
+        inventory_content = {"all": {"vars": general_vars},
+                             "_meta": {"hostvars": {}},
+                             "master_nodes": {"hosts": []},
+                             "worker_nodes": {"hosts": []},
+                             "provisioner": {"hosts": [provisioner_host],
+                                             "vars": {"ansible_connection":
+                                                      provisioner_connection}}}
+
         # check if we need to include controlplane data
         if inventory.get("controlplane"):
             general_vars["provision_controlplane"] = True
             general_vars["libvirt_uri"] = \
                 inventory["controlplane"]["libvirt_uri"]
             general_vars["bridge_name"] = inventory["controlplane"]["bridge"]
+
+            # add content for the master nodes
+            for master in inventory["controlplane"]["masters"]:
+                master_info = {
+                        "name": master["name"],
+                        "mac_address": master["mac_address"]
+                        }
+                inventory_content["master_nodes"]["hosts"].append(
+                        master_info["name"])
+                inventory_content["_meta"]["hostvars"][master_info["name"]] = \
+                    master_info
         else:
             general_vars["provision_controlplane"] = False
-
-        inventory_content = {"all": {"vars": general_vars},
-                             "_meta": {"hostvars": {}},
-                             "worker_nodes": {"hosts": []},
-                             "provisioner": {"hosts": [provisioner_host],
-                                             "vars": {"ansible_connection": provisioner_connection}}}
 
         # now check the workers
         needs_racadm = False
@@ -155,7 +170,8 @@ class ZTPInventory(object):
             # add the worker information
             inventory_content["worker_nodes"]["hosts"].append(
                 worker["hostname"])
-            inventory_content["_meta"]["hostvars"][worker["hostname"]] = worker_info
+            inventory_content["_meta"]["hostvars"][worker["hostname"]] = \
+                worker_info
 
         # finally, assign needs_bmc
         inventory_content["all"]["vars"]["need_racadm"] = needs_racadm
