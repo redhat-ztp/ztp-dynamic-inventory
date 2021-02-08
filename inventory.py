@@ -124,6 +124,8 @@ class ZTPInventory(object):
             general_vars["provision_controlplane"] = True
             general_vars["libvirt_uri"] = \
                 inventory["controlplane"]["libvirt_uri"]
+            if "libvirt_images_path" in inventory["controlplane"]:
+                general_vars["libvirt_images_path"] = inventory["controlplane"]["libvirt_images_path"]
             general_vars["bridge_name"] = inventory["controlplane"]["bridge"]
 
             # add content for the master nodes

@@ -13,6 +13,7 @@
   controlplane:                                                         # if deploying a control plane, name of the bridge and url for the hypervisor. If not specified, the control plane will not be deployed
     bridge: nm-bridge
     libvirt_uri: qemu:///system
+    libvirt_images_path: /var/lib/libvirt/images
     masters:
       - name: master_1
         mac_address: 52:54:00:55:f3:31
